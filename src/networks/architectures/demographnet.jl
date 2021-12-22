@@ -56,7 +56,7 @@ function Base.copy(nn::SimpleGNN)
 end
 
 function Network.forward(nn::SimpleGNN, state)
-  c = nn.model(state, state.ndata.x)
+  c = nn.model(state[1], state[1].ndata.x)
   v = c[1] # Value of state
   p = c[2:end] # Ranking of actions
   return (p, v)
