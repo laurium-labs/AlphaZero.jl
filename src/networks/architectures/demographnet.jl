@@ -26,8 +26,6 @@ end
     Something simple
 """
 
-
-
 mutable struct SimpleGNN <: FluxGNN
   gspec
   hyper
@@ -43,7 +41,8 @@ function SimpleGNN(gspec::AbstractGameSpec, hyper::SimpleGraphNetHP)
         x -> relu.(x),     
         GCNConv(innerSize => innerSize, relu),
         GlobalPool(mean),  # aggregate node-wise features into graph-wise features
-        Dense(innerSize, actionCount + 1))
+        Dense(innerSize, actionCount + 1),
+        softmax)
     return SimpleGNN(gspec, hyper, model)
 end
 
@@ -59,9 +58,6 @@ end
 
 function Network.forward(nn::SimpleGNN, state)
   c = nn.model(state[1], state[1].ndata.x)
-  @show @__LINE__
-  @show state[1].ndata.x
-  @show c
   v = c[1] # Value of state
   p = c[2:end] # Ranking of actions
   return (p, v)

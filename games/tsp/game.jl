@@ -10,7 +10,7 @@ struct GameSpec <: GI.AbstractGameSpec
 end
 
 function randGraph(numVerticies::Int)
-    graph = rand(numVerticies, numVerticies)
+    graph = rand(Float32, numVerticies, numVerticies)
     foreach(enumerate(eachcol(graph))) do (idx, col)
         graph[idx, :] .= col
         graph[idx, idx] = 0
@@ -110,7 +110,7 @@ function GI.play!(g::GameEnv, vertex::Int)
     sourcesTargetsWeights = hcat(sourcesTargets, weights)
     newGraph = hcat(deleteat!(collect(eachrow(sourcesTargetsWeights)), removedIndicies)...)
     inputs = collect(eachrow(newGraph))
-    graph = GNNGraph(Vector{Int}(inputs[1]), Vector{Int}(inputs[2]), Vector{Float64}(inputs[3]); ndata = (; x = ones(Float32, 1, g.gnnGraph.num_nodes)))
+    graph = GNNGraph(Vector{Int}(inputs[1]), Vector{Int}(inputs[2]), Vector{Float32}(inputs[3]); ndata = (; x = ones(Float32, 1, g.gnnGraph.num_nodes)))
 
     state = (gnnGraph = graph, availableActions = maskedActions)
     GI.set_state!(g, state)

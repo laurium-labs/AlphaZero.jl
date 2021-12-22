@@ -13,7 +13,7 @@
 # - V (size 1×n) contains the recorded values
 # Note that the weight of a sample is computed as an increasing
 # function of its `n` field.
-
+using GraphNeuralNetworks: GNNGraph
 function convert_sample(
     gspec::AbstractGameSpec,
     wp::SamplesWeighingPolicy,
@@ -27,7 +27,8 @@ function convert_sample(
     @assert wp == LINEAR_WEIGHT
     w = Float32[n]
   end
-  x = GI.vectorize_state(gspec, e.s)
+  x = GI.graph_state(gspec, e.s)
+  # x = GI.vectorize_state(gspec, e.s)
   a = GI.actions_mask(GI.init(gspec, e.s))
   p = zeros(size(a))
   p[a] = e.π
@@ -46,7 +47,15 @@ function convert_samples(
   A = Flux.batch((e.a for e in ces))
   P = Flux.batch((e.p for e in ces))
   V = Flux.batch((e.v for e in ces))
-  f32(arr) = convert(AbstractArray{Float32}, arr)
+  function f32(arr)
+    @show @__LINE__
+    @show typeof(arr)
+    if typeof(arr) <: Matrix
+      return convert(AbstractArray{Float32}, arr)
+    else
+      return arr
+    end
+  end
   return map(f32, (; W, X, A, P, V))
 end
 

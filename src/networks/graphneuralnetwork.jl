@@ -137,7 +137,7 @@ Network.hyperparams(nn::FluxGNN) = nn.hyper
 
 Network.game_spec(nn::FluxGNN) = nn.gspec
 
-Network.on_gpu(nn::FluxGNN) = array_on_gpu(nn.model[end].bias)
+Network.on_gpu(nn::FluxGNN) = array_on_gpu(nn.model[end-1].bias)
 
 #####
 ##### Include networks library
