@@ -260,13 +260,9 @@ end
 
 Return a tuple that indicates the shape of a vectorized state representation.
 """
-function state_dim(game_spec::AbstractGameSpec; graph::Bool = false)
-  state = current_state(init(game_spec))
-  if graph
-    return size(graph_state(game_spec, state))
-  else
+function state_dim(game_spec::AbstractGameSpec)
+    state = current_state(init(game_spec))
     return size(vectorize_state(game_spec, state))
-  end
 end
 
 """

@@ -25,24 +25,26 @@ end
 
     Something simple
 """
+
+
+
 mutable struct SimpleGNN <: FluxGNN
   gspec
   hyper
   model
 end
 
-
 function SimpleGNN(gspec::AbstractGameSpec, hyper::SimpleGraphNetHP)
     innerSize = hyper.innerSize
-    nodeFeature = GI.state_dim(gspec; graph = true)
-    actionCount = length(GI.num_actions(gspec))
-    model = GNNChain(GCNConv(nodeFeature[1] => innerSize),
+    nodeFeature = GI.state_dim(gspec)
+    actionCount = GI.num_actions(gspec)
+    model = GNNChain(GCNConv(nodeFeature => innerSize),
         BatchNorm(innerSize),     # Apply batch normalization on node features (nodes dimension is batch dimension)
         x -> relu.(x),     
         GCNConv(innerSize => innerSize, relu),
         GlobalPool(mean),  # aggregate node-wise features into graph-wise features
-        Dense(innerSize, actionCount))
-    SimpleGNN(gspec, hyper, model)
+        Dense(innerSize, actionCount + 1))
+    return SimpleGNN(gspec, hyper, model)
 end
 
 Network.HyperParams(::Type{<:SimpleGNN}) = SimpleGraphNetHP
@@ -57,6 +59,9 @@ end
 
 function Network.forward(nn::SimpleGNN, state)
   c = nn.model(state[1], state[1].ndata.x)
+  @show @__LINE__
+  @show state[1].ndata.x
+  @show c
   v = c[1] # Value of state
   p = c[2:end] # Ranking of actions
   return (p, v)

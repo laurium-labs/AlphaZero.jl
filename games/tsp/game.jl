@@ -9,19 +9,19 @@ struct GameSpec <: GI.AbstractGameSpec
     gnnGraph
 end
 
-function randGraph(graphSize::Int)
-    graph = rand(graphSize, graphSize)
+function randGraph(numVerticies::Int)
+    graph = rand(numVerticies, numVerticies)
     foreach(enumerate(eachcol(graph))) do (idx, col)
         graph[idx, :] .= col
         graph[idx, idx] = 0
     end
-    nodes = collect(1:graphSize)
-    sources = Vector(vec(repeat(nodes, 1, graphSize - 1)'))
+    nodes = collect(1:numVerticies)
+    sources = Vector(vec(repeat(nodes, 1, numVerticies - 1)'))
     targets = vcat(map(idx -> filter(val -> val != idx, nodes), nodes)...)
     weights = map(zip(sources, targets)) do (source, target)
         graph[source, target]
     end
-    return GNNGraph(sources, targets, weights; ndata = (; x = randn(Float32, 64, graphSize)))
+    return GNNGraph(sources, targets, weights; ndata = (; x = ones(Float32, 1, numVerticies)))
 end
 
 # GameSpec() = GameSpec(randGraph(rand(collect(1:20))))
@@ -103,16 +103,21 @@ function GI.play!(g::GameEnv, vertex::Int)
     visitedVerticies = deepcopy(g.visitedVerticies)
     index = [last(visitedVerticies), vertex]
 
-    potentialIndicies = findall(vert -> vert = index[1], sources)
-    keptIndicie = findfirst(col -> col == index, eachcol(sourcesTargets))
+    potentialIndicies = findall(vert -> vert == index[1], sources)
+    keptIndicie = findfirst(col -> col == index, collect(eachrow(sourcesTargets)))
     removedIndicies = filter(ind -> ind != keptIndicie, potentialIndicies)
 
     sourcesTargetsWeights = hcat(sourcesTargets, weights)
-    newGraph = hcat(deleteat!(collect(eachcol(sourcesTargetsWeights)), removedIndicies)...)
-    graph = GNNGraph(newGraph[1,:], newGraph[2,:], newGraph[3,:])
+    newGraph = hcat(deleteat!(collect(eachrow(sourcesTargetsWeights)), removedIndicies)...)
+    inputs = collect(eachrow(newGraph))
+    graph = GNNGraph(Vector{Int}(inputs[1]), Vector{Int}(inputs[2]), Vector{Float64}(inputs[3]); ndata = (; x = ones(Float32, 1, g.gnnGraph.num_nodes)))
 
     state = (gnnGraph = graph, availableActions = maskedActions)
     GI.set_state!(g, state)
+end
+
+function GI.state_dim(game_spec::GameSpec)
+    return size(game_spec.gnnGraph.ndata.x)[1]
 end
 
 function GI.white_reward(g::GameEnv)
