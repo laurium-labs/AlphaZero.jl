@@ -6,7 +6,7 @@ import AlphaZero.GI
 
 
 struct GameSpec <: GI.AbstractGameSpec
-    graph::Matrix{T} where T <: Number
+    graph::GNNGraph
 end
 
 function randGraph(graphSize::Int)
@@ -15,7 +15,13 @@ function randGraph(graphSize::Int)
         graph[idx, :] .= col
         graph[idx, idx] = 0
     end
-    return graph
+    nodes = collect(1:graphSize)
+    sources = vec(repeat(nodes, 1, graphSize - 1)')
+    targets = vec(map(idx -> filter(val -> val != idx, nodes), nodes)...)
+    weights = map(zip(sources, targets)) do (source, target)
+        graph[source, target]
+    end
+    return GNNGraph(sources, targets, weights)
 end
 
 GameSpec() = GameSpec(randGraph(rand(collect(1:20))))
@@ -26,7 +32,6 @@ mutable struct GameEnv <: GI.AbstractGameEnv
     visitedVerticies::Vector{Int}
     finished::Bool
 end
-
 GI.spec(game::GameEnv) = GameSpec(game.graph)
 
 function GI.init(spec::GameSpec)
@@ -97,7 +102,7 @@ function GI.white_reward(g::GameEnv)
         g.graph.weights[g.visitedVerticies[vert+1], g.visitedVerticies[vert]]
     end
 end
-re
+
 function GI.heuristic_value(g::GameEnv)
     return GI.white_reward(g)
 end
