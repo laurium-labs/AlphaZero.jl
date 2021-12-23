@@ -57,8 +57,9 @@ function Base.copy(nn::SimpleGNN)
 end
 
 function Network.forward(nn::SimpleGNN, state)
-  c = nn.model(state[1], state[1].ndata.x)
-  v = c[1] # Value of state
-  p = c[2:end] # Ranking of actions
+  applyModel(graph) = nn.model(graph, graph.ndata.x)
+  result = applyModel.(state)
+  v = [result[ind][indDepth] for indDepth in 1:1, ind in 1:length(state)]
+  p = [result[ind][indDepth] for indDepth in 2:size(result[1], 1), ind in 1:length(state) ]
   return (p, v)
 end

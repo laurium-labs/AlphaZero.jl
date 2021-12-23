@@ -72,5 +72,3 @@ benchmark = [
 
 experiment = Experiment(
   "tsp", GameSpec(), params, Network, netparams, benchmark)
-
-Scripts.dummy_run(experiment)

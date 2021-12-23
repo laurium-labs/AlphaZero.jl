@@ -67,6 +67,10 @@ function getPath(gnnGraph, visitedVerticies)
     return visitedVerticies
 end
 
+function Base.hash(gnn::GNNGraph, h::UInt64)
+    hash(hash(gnn.graph[1]) + hash(gnn.graph[2]) + hash(gnn.graph[3]) + hash(gnn.ndata) + h)
+end
+
 GI.two_players(::GameSpec) = false
 GI.actions(a::GameSpec) = collect(range(1, length = a.gnnGraph.num_nodes))
 GI.clone(g::GameEnv) = GameEnv(g.gnnGraph, deepcopy(g.maskedActions), deepcopy(g.visitedVerticies), g.finished)
@@ -95,7 +99,7 @@ function GI.play!(g::GameEnv, vertex::Int)
     sources = g.gnnGraph.graph[1]
     targets = g.gnnGraph.graph[2]
     weights = g.gnnGraph.graph[3]
-    sourcesTargets = hcat(sources,targets)
+    sourcesTargets = hcat(sources, targets)
 
     maskedActions = deepcopy(g.maskedActions)
     maskedActions[vertex] = false
@@ -114,6 +118,7 @@ function GI.play!(g::GameEnv, vertex::Int)
 
     state = (gnnGraph = graph, availableActions = maskedActions)
     GI.set_state!(g, state)
+    return
 end
 
 function GI.state_dim(game_spec::GameSpec)

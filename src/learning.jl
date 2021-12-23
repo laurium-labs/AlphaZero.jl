@@ -48,8 +48,6 @@ function convert_samples(
   P = Flux.batch((e.p for e in ces))
   V = Flux.batch((e.v for e in ces))
   function f32(arr)
-    @show @__LINE__
-    @show typeof(arr)
     if typeof(arr) <: Matrix
       return convert(AbstractArray{Float32}, arr)
     else

@@ -76,8 +76,6 @@ function fix_probvec(π)
       π ./= s
     end
   end
-  @show @__LINE__
-  @show π
   @assert Distributions.isprobvec(π)
   return π
 end
