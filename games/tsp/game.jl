@@ -138,8 +138,18 @@ function GI.heuristic_value(g::GameEnv)
     return GI.white_reward(g)
 end
 
-GI.render(g::GameEnv) = graphplot(g.gnnGraph; curves = false)
+function GI.render(g::GameEnv) 
+    graph = g.gnnGraph.graph
+    adjacencyMatrix = zeros(g.gnnGraph.num_nodes, g.gnnGraph.num_nodes)
+    foreach(zip(graph...)) do (source, target, weight)
+        adjacencyMatrix[source, target] = weight
+    end
+    graphplot(adjacencyMatrix; curves = false)
+    return
+end
 
 function GI.graph_state(spec::GameSpec, state)
     return state.gnnGraph
 end
+
+GI.action_string(::GameSpec, a) = string(a)

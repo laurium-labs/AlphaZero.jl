@@ -16,8 +16,10 @@ function evaluate(nn::GraphNetwork, state)
   actions_mask = GI.actions_mask(GI.init(gspec, state))
   x = GI.graph_state(gspec, state)
   a = Float32.(actions_mask)
-  xnet, anet = to_singletons.(convert_input_tuple(nn, (x, a)))
-  net_output = forward_normalized(nn, xnet, anet)
+  # @show @__LINE__
+  # @show sizeof(convert_input_tuple(nn, (x, a)))
+  xnet, anet = convert_input_tuple(nn, (x, a))
+  net_output = forward_normalized(nn, [xnet], anet)
   p, v, _ = from_singletons.(convert_output_tuple(nn, net_output))
   return (p[actions_mask], v[1])
 end
