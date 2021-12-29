@@ -138,11 +138,9 @@ end
 
 function GI.white_reward(g::GameEnv)
     isempty(g.visitedVerticies[1:end-1]) && (return 0.0)
-    sources = g.gnnGraph.graph[1]
-    indicies = findall(idx -> idx ∈ g.visitedVerticies[1:end-1], sources)
-    return -1 * sum(indicies) do vert
-        g.gnnGraph.graph[3][vert]
-    end
+    # sources = g.gnnGraph.graph[1]
+    # indicies = findall(idx -> idx ∈ g.visitedVerticies[1:end-1], sources)
+    return -1 * sum(weights(g.gnnGraph))
 end
 
 function GI.heuristic_value(g::GameEnv)
