@@ -36,7 +36,10 @@ end
 GI.spec(game::GameEnv) = GameSpec(game.gnnGraph)
 
 function GI.init(spec::GameSpec)
-    return GameEnv(spec.gnnGraph, trues(spec.gnnGraph.num_nodes), Vector{Int}([rand(Base.OneTo(spec.gnnGraph.num_nodes))]), false)
+    startingVertex = rand(Base.OneTo(spec.gnnGraph.num_nodes))
+    availableVerticies = trues(spec.gnnGraph.num_nodes)
+    availableVerticies[startingVertex] = false
+    return GameEnv(spec.gnnGraph, availableVerticies, Vector{Int}([startingVertex]), false)
 end
 
 function GI.set_state!(game::GameEnv, state)
@@ -96,27 +99,32 @@ function GI.current_state(g::GameEnv)
 end
 
 function GI.play!(g::GameEnv, vertex::Int)
-    sources = g.gnnGraph.graph[1]
-    targets = g.gnnGraph.graph[2]
-    weights = g.gnnGraph.graph[3]
-    sourcesTargets = hcat(sources, targets)
-
+    adjMatrix = adjacency_matrix(g.gnnGraph)
+    
     maskedActions = deepcopy(g.maskedActions)
     maskedActions[vertex] = false
-    
-    visitedVerticies = deepcopy(g.visitedVerticies)
-    index = [last(visitedVerticies), vertex]
 
-    potentialIndicies = findall(vert -> vert == index[1], sources)
-    keptIndicie = findfirst(col -> col == index, collect(eachrow(sourcesTargets)))
-    removedIndicies = filter(ind -> ind != keptIndicie, potentialIndicies)
+    edgeLength = deepcopy(adjMatrix[last(g.visitedVerticies), vertex])
+    adjMatrix[:, vertex] .= 0
+    adjMatrix[last(g.visitedVerticies),:] .= 0
+    adjMatrix[last(g.visitedVerticies), vertex] = edgeLength
 
-    sourcesTargetsWeights = hcat(sourcesTargets, weights)
-    newGraph = hcat(deleteat!(collect(eachrow(sourcesTargetsWeights)), removedIndicies)...)
-    inputs = collect(eachrow(newGraph))
-    graph = GNNGraph(Vector{Int}(inputs[1]), Vector{Int}(inputs[2]), Vector{Float32}(inputs[3]); ndata = (; x = ones(Float32, 1, g.gnnGraph.num_nodes)))
-
+    sources = Vector{Int}()
+    targets = Vector{Int}()
+    weights = Vector{Float32}()
+    foreach(enumerate(eachrow(adjMatrix))) do (i, col)
+        foreach(enumerate(col)) do (j, val)
+            if !iszero(val)
+                push!(sources, i)
+                push!(targets, j)
+                push!(weights, val)
+            end
+        end
+    end
+    graph = GNNGraph(sources, targets, weights; ndata = (; x = ones(Float32, 1, g.gnnGraph.num_nodes)))
     state = (gnnGraph = graph, availableActions = maskedActions)
+
+    push!(g.visitedVerticies, vertex)
     GI.set_state!(g, state)
     return
 end
@@ -138,18 +146,32 @@ function GI.heuristic_value(g::GameEnv)
     return GI.white_reward(g)
 end
 
-function GI.render(g::GameEnv) 
-    graph = g.gnnGraph.graph
-    adjacencyMatrix = zeros(g.gnnGraph.num_nodes, g.gnnGraph.num_nodes)
-    foreach(zip(graph...)) do (source, target, weight)
-        adjacencyMatrix[source, target] = weight
-    end
-    graphplot(adjacencyMatrix; curves = false)
-    return
+function GI.render(g::GameEnv)
+    display(graphplot(adjacency_matrix(g.gnnGraph); curves = false))
 end
 
 function GI.graph_state(spec::GameSpec, state)
     return state.gnnGraph
 end
 
-GI.action_string(::GameSpec, a) = string(a)
+function GI.action_string(::GameSpec, a)
+    return string(a)
+end
+
+function GI.read_state(game::GameSpec)
+    nodes = collect(Base.OneTo(game.gnnGraph.num_nodes))
+    maskedActions = trues(game.gnnGraph.num_nodes)
+    foreach(nodes) do node
+        maskedActions[node] = count(vert -> vert == node, game.gnnGraph.graph[2]) == 1 ? false : true
+    end
+    return (gnnGraph = game.gnnGraph, availableActions = maskedActions)
+end
+
+function GI.parse_action(game::GameSpec, input::String)
+    try
+        p = parse(Int, input)
+        1 <= p <= game.gnnGraph.num_nodes ? p : nothing
+    catch
+        nothing
+    end
+end
