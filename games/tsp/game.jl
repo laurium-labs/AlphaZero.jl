@@ -36,10 +36,7 @@ end
 GI.spec(game::GameEnv) = GameSpec(game.gnnGraph)
 
 function GI.init(spec::GameSpec)
-    startingVertex = rand(Base.OneTo(spec.gnnGraph.num_nodes))
-    availableVerticies = trues(spec.gnnGraph.num_nodes)
-    availableVerticies[startingVertex] = false
-    return GameEnv(spec.gnnGraph, availableVerticies, Vector{Int}([startingVertex]), false)
+    return GameEnv(spec.gnnGraph, trues(spec.gnnGraph.num_nodes), Vector{Int}(), false)
 end
 
 function GI.set_state!(game::GameEnv, state)
@@ -51,6 +48,7 @@ function GI.set_state!(game::GameEnv, state)
 end
 
 function getPath(gnnGraph, visitedVerticies)
+    isempty(visitedVerticies) && return Vector{Int}()
     lastVertex = last(visitedVerticies)
     if isone(count(idx -> idx == lastVertex, gnnGraph.graph[1]))
         push!(visitedVerticies, gnnGraph.graph[2][findfirst(ind -> ind == lastVertex, gnnGraph.graph[1])])
@@ -103,21 +101,26 @@ function GI.play!(g::GameEnv, vertex::Int)
     
     maskedActions = deepcopy(g.maskedActions)
     maskedActions[vertex] = false
+    if isempty(g.visitedVerticies)
+        sources = g.gnnGraph.graph[1]
+        targets = g.gnnGraph.graph[2]
+        weights = g.gnnGraph.graph[3]
+    else
+        edgeLength = deepcopy(adjMatrix[last(g.visitedVerticies), vertex])
+        adjMatrix[:, vertex] .= 0
+        adjMatrix[last(g.visitedVerticies),:] .= 0
+        adjMatrix[last(g.visitedVerticies), vertex] = edgeLength
 
-    edgeLength = deepcopy(adjMatrix[last(g.visitedVerticies), vertex])
-    adjMatrix[:, vertex] .= 0
-    adjMatrix[last(g.visitedVerticies),:] .= 0
-    adjMatrix[last(g.visitedVerticies), vertex] = edgeLength
-
-    sources = Vector{Int}()
-    targets = Vector{Int}()
-    weights = Vector{Float32}()
-    foreach(enumerate(eachrow(adjMatrix))) do (i, col)
-        foreach(enumerate(col)) do (j, val)
-            if !iszero(val)
-                push!(sources, i)
-                push!(targets, j)
-                push!(weights, val)
+        sources = Vector{Int}()
+        targets = Vector{Int}()
+        weights = Vector{Float32}()
+        foreach(enumerate(eachrow(adjMatrix))) do (i, col)
+            foreach(enumerate(col)) do (j, val)
+                if !iszero(val)
+                    push!(sources, i)
+                    push!(targets, j)
+                    push!(weights, val)
+                end
             end
         end
     end
@@ -170,8 +173,8 @@ end
 function GI.parse_action(game::GameSpec, input::String)
     try
         p = parse(Int, input)
-        1 <= p <= game.gnnGraph.num_nodes ? p : nothing
+        return 1 <= p <= game.gnnGraph.num_nodes ? p : nothing
     catch
-        nothing
+        return nothing
     end
 end
