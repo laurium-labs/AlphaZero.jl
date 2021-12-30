@@ -25,7 +25,7 @@ function randGraph(numVerticies::Int)
 end
 
 # GameSpec() = GameSpec(randGraph(rand(collect(1:20))))
-GameSpec() = GameSpec(randGraph(5))
+GameSpec() = GameSpec(randGraph(rand(10:30)))
 GameSpec(size::Int) = GameSpec(randGraph(size))
 
 
