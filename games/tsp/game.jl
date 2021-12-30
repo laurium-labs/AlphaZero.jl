@@ -2,6 +2,7 @@ using Graphs, SimpleWeightedGraphs
 using Plots, GraphRecipes
 using AlphaZero
 using GraphNeuralNetworks
+using Statistics
 import AlphaZero.GI
 
 
@@ -143,7 +144,7 @@ function GI.white_reward(g::GameEnv)
     isempty(g.visitedVerticies[1:end-1]) && (return 0.0)
     # sources = g.gnnGraph.graph[1]
     # indicies = findall(idx -> idx ∈ g.visitedVerticies[1:end-1], sources)
-    return -1 * sum(adjacency_matrix(g.gnnGraph))
+    return -1 * mean(adjacency_matrix(g.gnnGraph))
 end
 
 function GI.heuristic_value(g::GameEnv)
