@@ -25,7 +25,7 @@ function randGraph(numVerticies::Int)
 end
 
 # GameSpec() = GameSpec(randGraph(rand(collect(1:20))))
-GameSpec() = GameSpec(randGraph(5))
+GameSpec() = GameSpec(randGraph(15))
 
 mutable struct GameEnv <: GI.AbstractGameEnv
     gnnGraph
@@ -137,7 +137,7 @@ function GI.state_dim(game_spec::GameSpec)
 end
 
 function GI.white_reward(g::GameEnv)
-    isempty(g.visitedVerticies[1:end-1]) && (return 0.0)
+    isempty(g.visitedVerticies[1:end-1]) && (return -Inf)
     # sources = g.gnnGraph.graph[1]
     # indicies = findall(idx -> idx ∈ g.visitedVerticies[1:end-1], sources)
     return -1 * sum(weights(g.gnnGraph))

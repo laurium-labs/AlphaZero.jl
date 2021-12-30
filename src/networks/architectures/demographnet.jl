@@ -60,6 +60,6 @@ function Network.forward(nn::SimpleGNN, state)
   applyModel(graph) = nn.model(graph, graph.ndata.x)
   result = applyModel.(state)
   v = [result[ind][indDepth] for indDepth in 1:1, ind in 1:length(state)]
-  p = [result[ind][indDepth] for indDepth in 2:size(result[1], 1), ind in 1:length(state) ]
+  p = [result[ind][indDepth] for indDepth in 2:size(result[1], 1), ind in 1:length(state)]
   return (p, v)
 end
