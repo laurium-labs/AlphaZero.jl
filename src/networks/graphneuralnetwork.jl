@@ -128,7 +128,7 @@ end
 
 # Flux.@functor does not work with abstract types
 function Flux.functor(nn::Net) where Net <: FluxGNN
-  children = (nn.model, )
+  children = (nn.common, nn.vhead, nn.phead, )
   constructor = cs -> Net(nn.gspec, nn.hyper, cs...)
   return (children, constructor)
 end
@@ -137,7 +137,7 @@ Network.hyperparams(nn::FluxGNN) = nn.hyper
 
 Network.game_spec(nn::FluxGNN) = nn.gspec
 
-Network.on_gpu(nn::FluxGNN) = array_on_gpu(nn.model[end-1].bias)
+Network.on_gpu(nn::FluxGNN) = array_on_gpu(nn.common[end].bias)
 
 #####
 ##### Include networks library

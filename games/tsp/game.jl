@@ -25,18 +25,21 @@ function randGraph(numVerticies::Int)
 end
 
 # GameSpec() = GameSpec(randGraph(rand(collect(1:20))))
-GameSpec() = GameSpec(randGraph(15))
+GameSpec() = GameSpec(randGraph(rand(10:30)))
+GameSpec(size::Int) = GameSpec(randGraph(size))
+
 
 mutable struct GameEnv <: GI.AbstractGameEnv
     gnnGraph
     maskedActions::Vector{Bool} # Masked actions and visitedVerticies can be derived from graph, but are included for clarity
     visitedVerticies::Vector{Int}
     finished::Bool
+    specGraph
 end
-GI.spec(game::GameEnv) = GameSpec(game.gnnGraph)
+GI.spec(game::GameEnv) = GameSpec(game.specGraph)
 
 function GI.init(spec::GameSpec)
-    return GameEnv(spec.gnnGraph, trues(spec.gnnGraph.num_nodes), Vector{Int}(), false)
+    return GameEnv(spec.gnnGraph, trues(spec.gnnGraph.num_nodes), Vector{Int}(), false, spec.gnnGraph)
 end
 
 function GI.set_state!(game::GameEnv, state)
@@ -74,7 +77,7 @@ end
 
 GI.two_players(::GameSpec) = false
 GI.actions(a::GameSpec) = collect(range(1, length = a.gnnGraph.num_nodes))
-GI.clone(g::GameEnv) = GameEnv(g.gnnGraph, deepcopy(g.maskedActions), deepcopy(g.visitedVerticies), g.finished)
+GI.clone(g::GameEnv) = GameEnv(g.gnnGraph, deepcopy(g.maskedActions), deepcopy(g.visitedVerticies), g.finished, g.specGraph)
 GI.white_playing(::GameEnv) = true
 GI.game_terminated(g::GameEnv) = g.finished
 GI.available_actions(g::GameEnv) = collect(range(1, length = g.gnnGraph.num_nodes))[g.maskedActions]
@@ -140,7 +143,7 @@ function GI.white_reward(g::GameEnv)
     isempty(g.visitedVerticies[1:end-1]) && (return -Inf)
     # sources = g.gnnGraph.graph[1]
     # indicies = findall(idx -> idx ∈ g.visitedVerticies[1:end-1], sources)
-    return -1 * sum(weights(g.gnnGraph))
+    return -1 * sum(adjacency_matrix(g.gnnGraph))
 end
 
 function GI.heuristic_value(g::GameEnv)
