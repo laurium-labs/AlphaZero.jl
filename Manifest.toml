@@ -397,9 +397,9 @@ version = "2.68.3+2"
 
 [[GraphNeuralNetworks]]
 deps = ["Adapt", "CUDA", "ChainRulesCore", "DataStructures", "Flux", "Functors", "Graphs", "KrylovKit", "LearnBase", "LinearAlgebra", "MacroTools", "NNlib", "NNlibCUDA", "NearestNeighbors", "Random", "Reexport", "SparseArrays", "Statistics", "StatsBase"]
-git-tree-sha1 = "6c395782db92f8c481b9916d806bd8792832b396"
+path = "../GraphNeuralNetworks.jl"
 uuid = "cffab07f-9bc2-4db1-8861-388f63bf7694"
-version = "0.3.6"
+version = "0.3.7"
 
 [[GraphRecipes]]
 deps = ["AbstractTrees", "GeometryTypes", "Graphs", "InteractiveUtils", "Interpolations", "LinearAlgebra", "NaNMath", "NetworkLayout", "PlotUtils", "RecipesBase", "SparseArrays", "Statistics"]

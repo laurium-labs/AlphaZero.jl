@@ -41,4 +41,3 @@ function evaluate_batch(nn::GraphNetwork, batch)
   P, V, _ = convert_output_tuple(nn, forward_normalized(nn, Xnet, Anet))
   return [(P[A[:,i],i], V[1,i]) for i in eachindex(batch)]
 end
-  
