@@ -3,6 +3,7 @@ using Plots, GraphRecipes
 using AlphaZero
 using GraphNeuralNetworks
 using Statistics
+import Flux
 import AlphaZero.GI
 
 
@@ -179,4 +180,47 @@ function GI.parse_action(game::GameSpec, input::String)
     catch
         return nothing
     end
+end
+
+function convert_sample(
+    gspec::AlphaZero.Examples.Tsp.GameSpec,
+    wp::SamplesWeighingPolicy,
+    e::AlphaZero.TrainingSample)
+
+  if wp == CONSTANT_WEIGHT
+    w = Float32[1]
+  elseif wp == LOG_WEIGHT
+    w = Float32[log2(e.n) + 1]
+  else
+    @assert wp == LINEAR_WEIGHT
+    w = Float32[n]
+  end
+  x = GI.graph_state(gspec, e.s)
+  a = GI.actions_mask(GI.init(gspec, e.s))
+  p = zeros(size(a))
+  p[a] = e.π
+  v = [e.z]
+  return (; w, x, a, p, v)
+end
+
+function AlphaZero.convert_samples(
+  gspec::AlphaZero.Examples.Tsp.GameSpec,
+  wp::SamplesWeighingPolicy,
+  es::Vector{<:AlphaZero.TrainingSample})
+
+ces = [convert_sample(gspec, wp, e) for e in es]
+W = Flux.batch((e.w for e in ces))
+X = Flux.batch((e.x for e in ces))
+X = Flux.batch(Vector{typeof(X[1])}(X))
+A = Flux.batch((e.a for e in ces))
+P = Flux.batch((e.p for e in ces))
+V = Flux.batch((e.v for e in ces))
+function f32(arr)
+  if typeof(arr) <: Matrix
+    return convert(AbstractArray{Float32}, arr)
+  else
+    return arr
+  end
+end
+return map(f32, (; W, X, A, P, V))
 end

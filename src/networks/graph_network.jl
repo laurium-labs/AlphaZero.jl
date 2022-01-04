@@ -36,6 +36,7 @@ MCTS oracle interface.
 function evaluate_batch(nn::GraphNetwork, batch)
   gspec = game_spec(nn)
   X = Flux.batch((GI.graph_state(gspec, b) for b in batch))
+  X = Flux.batch(Vector{typeof(X[1])}(X))
   A = Flux.batch((GI.actions_mask(GI.init(gspec, b)) for b in batch))
   Xnet, Anet = convert_input_tuple(nn, (X, Float32.(A)))
   P, V, _ = convert_output_tuple(nn, forward_normalized(nn, Xnet, Anet))
