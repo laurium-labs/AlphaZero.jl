@@ -12,6 +12,7 @@ module AlphaZero
   using Distributions: Categorical, Dirichlet
   using Statistics: mean
   using Requires
+  using TimerOutputs
 
 
   # Even when using the Knet backend, we use utilities from Flux such as

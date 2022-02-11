@@ -193,16 +193,29 @@ function RandomMctsPlayer(game_spec::AbstractGameSpec, params::MctsParams)
     τ=params.temperature)
 end
 
-function think(p::MctsPlayer, game)
-  if isnothing(p.timeout) # Fixed number of MCTS simulations
-    MCTS.explore!(p.mcts, game, p.niters)
-  else # Run simulations until timeout
-    start = time()
-    while time() - start < p.timeout
+function think(p::MctsPlayer, game; to = nothing)
+  if isnothing(to)
+    if isnothing(p.timeout) # Fixed number of MCTS simulations
       MCTS.explore!(p.mcts, game, p.niters)
+    else # Run simulations until timeout
+      start = time()
+      while time() - start < p.timeout
+        MCTS.explore!(p.mcts, game, p.niters)
+      end
     end
+    return MCTS.policy(p.mcts, game)
+  else 
+    if isnothing(p.timeout) # Fixed number of MCTS simulations
+      @timeit to " explore" MCTS.explore!(p.mcts, game, p.niters, to=to)
+    else # Run simulations until timeout
+      start = time()
+      while time() - start < p.timeout
+        @timeit to " explore timed" MCTS.explore!(p.mcts, game, p.niters)
+      end
+    end
+    return MCTS.policy(p.mcts, game)
+
   end
-  return MCTS.policy(p.mcts, game)
 end
 
 function player_temperature(p::MctsPlayer, game, turn)
@@ -252,9 +265,9 @@ end
 
 flipped_colors(p::TwoPlayers) = TwoPlayers(p.black, p.white)
 
-function think(p::TwoPlayers, game)
+function think(p::TwoPlayers, game; to=nothing)
   if GI.white_playing(game)
-    return think(p.white, game)
+    return think(p.white, game, to=to)
   else
     return think(p.black, game)
   end
@@ -296,8 +309,10 @@ Simulate a game by an [`AbstractPlayer`](@ref).
   using [`GI.apply_random_symmetry!`](@ref).
 """
 function play_game(gspec, player; flip_probability=0.)
-  game = GI.init(gspec)
-  trace = Trace(GI.current_state(game))
+  to = TimerOutput()
+
+  game = @timeit to "init" GI.init(gspec)
+  trace = @timeit to "start trace" Trace(GI.current_state(game))
   while true
     if GI.game_terminated(game)
       return trace
@@ -305,13 +320,17 @@ function play_game(gspec, player; flip_probability=0.)
     if !iszero(flip_probability) && rand() < flip_probability
       GI.apply_random_symmetry!(game)
     end
-    actions, π_target = think(player, game)
+    actions, π_target = @timeit to "think" think(player, game, to = to)
     τ = player_temperature(player, game, length(trace))
     π_sample = apply_temperature(π_target, τ)
     a = actions[Util.rand_categorical(π_sample)]
-    GI.play!(game, a)
-    push!(trace, π_target, GI.white_reward(game), GI.current_state(game))
+    @show a
+    @timeit to "play" GI.play!(game, a)
+    @timeit to "trace push" push!(trace, π_target, GI.white_reward(game), GI.current_state(game))
+    show(to)
+
   end
+  error()
 end
 
 #####

@@ -18,6 +18,7 @@ a pair `(P, V)` where:
 module MCTS
 
 using Distributions: Categorical, Dirichlet
+using TimerOutputs
 
 using ..AlphaZero: GI, Util
 
@@ -162,14 +163,26 @@ end
 
 # Returns statistics for the current player, along with a boolean indicating
 # whether or not a new node has been created.
-function state_info(env, state)
-  if haskey(env.tree, state)
-    return (env.tree[state], false)
-  else
-    (P, V) = env.oracle(state)
-    info = init_state_info(P, V, env.prior_temperature)
-    env.tree[state] = info
-    return (info, true)
+function state_info(env, state; to=nothing)
+  if isnothing(to )
+    if haskey(env.tree, state)
+      return (env.tree[state], false)
+    else
+      (P, V) = env.oracle(state)
+      info = init_state_info(P, V, env.prior_temperature)
+      env.tree[state] = info
+      return (info, true)
+    end
+  else 
+    info = @timeit to "get stuff" get(env.tree, state, nothing)
+    if !isnothing(info)
+      return (info, false)
+    else
+      (P, V) =@timeit to "oracle" env.oracle(state)
+      info =  @timeit to "init state info" init_state_info(P, V, env.prior_temperature)
+      env.tree[state] = info
+      return (info, true)
+    end
   end
 end
 
@@ -196,32 +209,63 @@ end
 # Run a single MCTS simulation, updating the statistics of all traversed states.
 # Return the estimated Q-value for the current player.
 # Modifies the state of the game environment.
-function run_simulation!(env::Env, game; η, root=true)
-  if GI.game_terminated(game)
-    return 0.
-  else
-    state = GI.current_state(game)
-    actions = GI.available_actions(game)
-    info, new_node = state_info(env, state)
-    if new_node
-      return info.Vest
+function run_simulation!(env::Env, game; η, root=true, to=nothing)
+  if isnothing(to)
+    if GI.game_terminated(game)
+      return 0.
     else
-      ϵ = root ? env.noise_ϵ : 0.
-      scores = uct_scores(info, env.cpuct, ϵ, η)
-      action_id = argmax(scores)
-      action = actions[action_id]
-      wp = GI.white_playing(game)
-      GI.play!(game, action)
-      wr = GI.white_reward(game)
-      r = wp ? wr : -wr
-      pswitch = wp != GI.white_playing(game)
-      qnext = run_simulation!(env, game, η=η, root=false)
-      qnext = pswitch ? -qnext : qnext
-      q = r + env.gamma * qnext
-      update_state_info!(env, state, action_id, q)
-      env.total_nodes_traversed += 1
-      return q
+      state = GI.current_state(game)
+      actions = GI.available_actions(game)
+      info, new_node = state_info(env, state)
+      if new_node
+        return info.Vest
+      else
+        ϵ = root ? env.noise_ϵ : 0.
+        scores = uct_scores(info, env.cpuct, ϵ, η)
+        action_id = argmax(scores)
+        action = actions[action_id]
+        wp = GI.white_playing(game)
+        GI.play!(game, action)
+        wr = GI.white_reward(game)
+        r = wp ? wr : -wr
+        pswitch = wp != GI.white_playing(game)
+        qnext = run_simulation!(env, game, η=η, root=false)
+        qnext = pswitch ? -qnext : qnext
+        q = r + env.gamma * qnext
+        update_state_info!(env, state, action_id, q)
+        env.total_nodes_traversed += 1
+        return q
+      end
     end
+  else 
+    isTerm = @timeit to "is terminated" GI.game_terminated(game)
+    if isTerm
+      return 0.
+    else
+      state = @timeit to "get state" GI.current_state(game)
+      actions = @timeit to "get actions" GI.available_actions(game)
+      info, new_node = @timeit to "state info" state_info(env, state, to = to)
+      if new_node
+        return info.Vest
+      else
+        ϵ = root ? env.noise_ϵ : 0.
+        scores = @timeit to "scores" uct_scores(info, env.cpuct, ϵ, η)
+        action_id = argmax(scores)
+        action = actions[action_id]
+        wp = GI.white_playing(game)
+        @timeit to "play!" GI.play!(game, action)
+        wr =@timeit to "white reward" GI.white_reward(game)
+        r = wp ? wr : -wr
+        pswitch = wp != GI.white_playing(game)
+        qnext = run_simulation!(env, game, η=η, root=false, to=to)
+        qnext = pswitch ? -qnext : qnext
+        q = r + env.gamma * qnext
+        @timeit to "update state" update_state_info!(env, state, action_id, q)
+        env.total_nodes_traversed += 1
+        return q
+      end
+    end
+
   end
 end
 
@@ -236,11 +280,11 @@ end
 
 Run `nsims` MCTS simulations from the current state.
 """
-function explore!(env::Env, game, nsims)
+function explore!(env::Env, game, nsims; to=nothing)
   η = dirichlet_noise(game, env.noise_α)
   for i in 1:nsims
     env.total_simulations += 1
-    run_simulation!(env, GI.clone(game), η=η)
+    run_simulation!(env, GI.clone(game), η=η, to=to)
   end
 end
 
